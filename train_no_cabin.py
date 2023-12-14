@@ -7,6 +7,7 @@ import seaborn as sns
 
 from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import GradientBoostingRegressor
+from sklearn.base import BaseEstimator, TransformerMixin
 
 
 def read_set(is_train=True):
@@ -54,9 +55,26 @@ def get_family_size(df: pd.DataFrame):
     return df["SibSp"] + df["Parch"] + 1
 
 
+class LogNormalizer(BaseEstimator, TransformerMixin):
+    def __init__(self):
+        pass
+
+    def fit(self, X):
+        return self
+
+    def _log_normalize(self, x):
+        return np.sign(x) * np.log(np.abs(x) + 1)
+
+    def transform(self, X):
+        if isinstance(X, pd.DataFrame):
+            return pd.DataFrame(self._log_normalize(np.array(X)), columns=X.columns)
+        else:
+            return np.where(X >= 0, np.log(X + 1), -np.log(-X + 1))
+
+
 def scale_col(df: pd.DataFrame, col: str, apply=False, use_scaler=None):
     if use_scaler is None:
-        scaler = StandardScaler()
+        scaler = LogNormalizer()
     else:
         scaler = use_scaler
 
@@ -201,6 +219,9 @@ def main():
     train_df = read_set(is_train=True)
     test_df = read_set(is_train=False)
 
+    train_df.fillna({"Cabin": "O0"}, inplace=True)
+    test_df.fillna({"Cabin": "O0"}, inplace=True)
+
     apply_expand_cab(train_df)
     apply_expand_cab(test_df)
 
@@ -236,6 +257,21 @@ def main():
 
     age_scaler = scale_col(train_df, "Age", apply=True)
     scale_col(test_df, "Age", apply=True, use_scaler=age_scaler)
+
+    deck_map = pd.DataFrame(train_df["cabin_highest_class_deck"].value_counts().index)
+    deck_map["index"] = deck_map.index
+
+    n_to_deck = deck_map.to_dict()[0]
+    deck_to_n = {v: k for k, v in n_to_deck.items()}
+
+    train_df["cabin_highest_class_deck"] = train_df["cabin_highest_class_deck"].map(
+        deck_to_n
+    )
+    test_df["cabin_highest_class_deck"] = test_df["cabin_highest_class_deck"].map(
+        deck_to_n
+    )
+
+    test_df = test_df.interpolate(method='from_derivatives')
 
     train_df.to_csv("datasets/train_clean.csv", index=False)
     test_df.to_csv("datasets/test_clean.csv", index=False)
