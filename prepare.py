@@ -133,7 +133,9 @@ def prepare_ages_df(train_df: pd.DataFrame, test_df: pd.DataFrame) -> pd.DataFra
     return ages_df
 
 
-def split_ages_df_to_train_and_nan(ages_df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+def split_ages_df_to_train_and_nan(
+    ages_df: pd.DataFrame,
+) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     ages_train = ages_df[ages_df["Age"].notnull()]
     ages_test = ages_df[ages_df["Age"].isnull()]
 
@@ -150,8 +152,10 @@ def predict_ages(train_df: pd.DataFrame, test_df: pd.DataFrame):
 
     ages_train_X, ages_train_y, ages_test_X = split_ages_df_to_train_and_nan(ages_df)
 
-    X_train, y_train = ages_train_X.drop(
-        columns=["PassengerId", "Survived"]), ages_train_y
+    X_train, y_train = (
+        ages_train_X.drop(columns=["PassengerId", "Survived"]),
+        ages_train_y,
+    )
 
     X_test = ages_test_X.drop(columns=["PassengerId", "Survived"])
 
@@ -272,7 +276,7 @@ def main():
     train_df.drop(columns=["index"], inplace=True)
     test_df.drop(columns=["index"], inplace=True)
 
-    test_df["Fare"] = test_df["Fare"].interpolate(method='from_derivatives')
+    test_df["Fare"] = test_df["Fare"].interpolate(method="from_derivatives")
 
     train_df, test_df = predict_ages(train_df, test_df)
 
@@ -291,7 +295,6 @@ def main():
     test_df["cabin_highest_class_deck"] = test_df["cabin_highest_class_deck"].map(
         deck_to_n
     )
-
 
     train_df.to_csv("datasets/train_clean.csv", index=False)
     test_df.to_csv("datasets/test_clean.csv", index=False)
